@@ -1,9 +1,6 @@
 // AdamHStiles
 // A custom TUI to recieve and display packets from our x86 Web Server
-#include <stdlib.h>
-#include <string.h>
-#include <ncurses.h>
-#include <curl/curl.h>
+#include "client.h"
 
 const char *frame1 =
 "........................................\n"
@@ -133,10 +130,6 @@ const char *frame3 =
 "........................................\n"
 "........................................\n";
 
-struct Buffer{
-    char *data;
-    size_t size;
-};
 
 // parameters as defined by curl
 size_t curl_callback(void *contents, size_t size, size_t nmeb, void *data){
@@ -165,17 +158,17 @@ int main(){
 
     // *---- curl setup ----*
 
-    //curl_global_init(CURL_GLOBAL_ALL); // starts curl, inits all platforms
-    //CURL *easy_handle = curl_easy_init();
-    //if(!easy_handle){
-    //    printf("CURL failed to initialize!");
-    //    return 1;
-    //}else{
-    //    struct Buffer buf = {malloc(1), 0};
-    //    curl_easy_setopt(easy_handle, CURLOPT_URL, server_URL);
-    //    curl_easy_setopt(easy_handle, CURLOPT_WRITEFUNCTION, (void*)&buf);
-    //    // start sending requests
-    //}
+    curl_global_init(CURL_GLOBAL_ALL); // starts curl, inits all platforms
+    CURL *easy_handle = curl_easy_init();
+    if(!easy_handle){
+        printf("CURL failed to initialize!");
+        return 1;
+    }else{
+        struct Buffer buf = {malloc(1), 0};
+        curl_easy_setopt(easy_handle, CURLOPT_URL, server_URL);
+        curl_easy_setopt(easy_handle, CURLOPT_WRITEFUNCTION, (void*)&buf);
+        // start sending requests
+    }
 
     // *---- ncurses setup ----*
     noecho(); 
