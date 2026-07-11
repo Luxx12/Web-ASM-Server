@@ -14,4 +14,4 @@ struct menu_button{
     char *txt;
 };
 
-size_t curl_callback(void *contents, size_t size, size_t nmeb, void *data){
+size_t curl_callback(void *contents, size_t size, size_t nmeb, void *data);

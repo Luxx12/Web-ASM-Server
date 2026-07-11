@@ -9,8 +9,8 @@ ncurses and libcurl are C libraries used by every application that has a TUI or 
 
 #### update your packages
 
-`sudo apt update`
-`sudo apt upgrade`
+``` sudo apt update
+    sudo apt upgrade```
 
 #### installing ncurses
 
@@ -19,3 +19,7 @@ ncurses and libcurl are C libraries used by every application that has a TUI or 
 #### installing libcurl
 
 `sudo apt install libcurl4-openssl-dev`
+
+## Building
+
+`gcc client.c -lncurses -o client.o 
