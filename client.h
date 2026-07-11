@@ -15,3 +15,4 @@ struct menu_button{
 };
 
 size_t curl_callback(void *contents, size_t size, size_t nmeb, void *data);
+char *GET_FRAME(CURL *easy_handle, double theta, double phi, double distance);
