@@ -1,6 +1,10 @@
 section .data
 response: db "HTTP/1.0 200 OK", 13, 10, "Content-Length: 13", 13, 10, 13, 10, "Hello, world!"
 response_len: equ $ - response
+req_get: db "GET "
+get_len: equ $ - req_get
+err_response: db "HTTP/1.0 400 Bad Request", 13, 10, 13, 10
+err_len: equ $ - err_response
 
 section .text
     global _start
@@ -70,6 +74,14 @@ child:
     mov rdx, 2048                ;
     syscall
 
+    
+    lea rsi, [req_get]           ; # checks if GET was recieved, sends a 400 error if not (basically doing a string comparison here)
+    lea rdi, [rsp]               ;
+    mov rcx, get_len             ;
+    cld                          ; # checks if their pointing at the same place in memory
+    repe cmpsb                   ; # actually compares both strings in rsi & rdi byte by byte repeatedly using repe
+    jne not_get
+
     mov rax, 1                   ; # write(client fd, &response, response length)
     mov rdi, r12                 ;
     lea rsi, [response]          ;
@@ -82,4 +94,19 @@ child:
 
     mov rdi, rax                 ;
     mov rax, 60                  ;
+    syscall
+
+not_get:
+    mov rax, 1                   ;
+    mov rdi, r12                 ;
+    lea rsi, [err_response]      ;
+    mov rdx, err_len             ;
+    syscall
+
+    mov rax, 3                   ;
+    mov rdi, r12                 ;
+    syscall
+
+    mov rax, 60                  ;
+    mov rdi, 1                   ;
     syscall
