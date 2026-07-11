@@ -1,8 +1,13 @@
+#include <stdlib.h> 
+
 #include <iostream>
 #include <string>
 #include <cmath>
 #include <vector>
 #include <fstream>
+
+#include <cstdio>  
+#include <cstdlib> 
 
 #include <Eigen/Dense>
 

@@ -1,15 +1,20 @@
 section .data
-response: db "HTTP/1.0 200 OK", 13, 10, "Content-Length: 13", 13, 10, 13, 10, "Hello, world!"
+response: db "HTTP/1.0 200 OK", 13, 10, 13, 10
 response_len: equ $ - response
-req_get: db "GET "
+req_get: db "GET " ; GET /?t=30.22&p=98&d=2
 get_len: equ $ - req_get
 err_response: db "HTTP/1.0 400 Bad Request", 13, 10, 13, 10
 err_len: equ $ - err_response
 
-section .text
-    global _start
+ampersand: db "&"
+filename: db "./output.txt", 0     
 
-_start:
+section .text
+    extern getFrame
+    extern strtod
+    global main
+
+main:
     mov rax, 41                  ; # socket
     mov rdi, 2                   ; # AF_INET = IPv4
     mov rsi, 1                   ; # SOCK_STREAM = TCP
@@ -82,11 +87,67 @@ child:
     repe cmpsb                   ; # actually compares both strings in rsi & rdi byte by byte repeatedly using repe
     jne not_get
 
+    lea r14, [rsp + 8]           ; pointer to start of theta's digits, captured before rsp moves
+
+    sub rsp, 32                  ; end ptr, 3 doubles
+    and rsp, 0xFFFFFFFFFFFFFFF0  ; force 16-byte alignment before calling into strtod/getFrame
+
+    mov rdi, r14
+    lea rsi, [rsp]               ; end ptr
+
+    call strtod 
+
+    movsd [rsp + 8], xmm0       ; theta
+
+    mov rdi, [rsp]
+    add rdi, 3
+    lea rsi, [rsp]
+    
+    call strtod
+    movsd [rsp + 16], xmm0      ; phi
+
+    mov rdi, [rsp]
+    add rdi, 3
+    lea rsi, [rsp]
+    call strtod
+    movsd [rsp + 24], xmm0      ; distance
+
+    movsd xmm0, [rsp + 8]
+    movsd xmm1, [rsp + 16]
+    movsd xmm2, [rsp + 24]      
+    call getFrame               ; ignoring return value her
+
+
+    mov rax, 2                  ; # open
+    lea rdi, [filename]
+    mov rsi, 0                  ; # O_RDONLY
+    mov rdx, 0                  
+    syscall
+
+    mov r13, rax
+
+    sub rsp, 60000              ; sub by some large amount
+    and rsp, 0xFFFFFFFFFFFFFFF0 ; ensure alignment
+
+    mov rax, 0           
+    mov rdi, r13          
+    lea rsi, [rsp]         
+    mov rdx, 60000         
+    syscall
+
+    mov r13, rax
+
     mov rax, 1                   ; # write(client fd, &response, response length)
     mov rdi, r12                 ;
     lea rsi, [response]          ;
     mov rdx, response_len        ;
     syscall
+
+    mov rax, 1                   ; # write(client fd, &response, response length)
+    mov rdi, r12                 ;
+    lea rsi, [rsp]               ;
+    mov rdx, r13                 ;
+    syscall                      ; send entire file
 
     mov rax, 3                   ; # close client fd
     mov rdi, r12                 ;
