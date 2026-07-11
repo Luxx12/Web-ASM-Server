@@ -1,10 +1,9 @@
 // AdamHStiles
 // A custom TUI to recieve and display packets from our x86 Web Server
-
+#include <stdlib.h>
 #include <string.h>
 #include <ncurses.h>
 #include <curl/curl.h>
-#include <unistd.h>
 
 const char *frame1 =
 "........................................\n"
@@ -138,6 +137,7 @@ struct Buffer{
     char *data;
     size_t size;
 };
+
 // parameters as defined by curl
 size_t curl_callback(void *contents, size_t size, size_t nmeb, void *data){
     size_t total = size * nmeb;
@@ -149,6 +149,8 @@ size_t curl_callback(void *contents, size_t size, size_t nmeb, void *data){
     // copies contents into our buffer
     buf->size += total;
     buf->data[buf->size] = '\0';
+
+    return total;
 }
 
 int main(){
@@ -163,16 +165,17 @@ int main(){
 
     // *---- curl setup ----*
 
-    curl_global_init(CURL_GLOBAL_ALL); // starts curl, inits all platforms
-    CURL *easy_handle = curl_easy_init();
-    if(!easy_handle){
-        printf("CURL failed to initialize!");
-        return 1;
-    }else{
-        curl_easy_setopt(easy_handle, CURLOPT_URL, server_URL);
-        curl_easy_setopt(easy_handle, CURLOPT_WRITEFUNCTION, )
-        // start sending requests
-    }
+    //curl_global_init(CURL_GLOBAL_ALL); // starts curl, inits all platforms
+    //CURL *easy_handle = curl_easy_init();
+    //if(!easy_handle){
+    //    printf("CURL failed to initialize!");
+    //    return 1;
+    //}else{
+    //    struct Buffer buf = {malloc(1), 0};
+    //    curl_easy_setopt(easy_handle, CURLOPT_URL, server_URL);
+    //    curl_easy_setopt(easy_handle, CURLOPT_WRITEFUNCTION, (void*)&buf);
+    //    // start sending requests
+    //}
 
     // *---- ncurses setup ----*
     noecho(); 
@@ -186,15 +189,15 @@ int main(){
     row_no = max_rows/2 - f_height;
     col_no = max_cols/2 - f_width;
 
-    while(true){
+    while(getch() != 'q'){
         if(f >= 3) f = 0;
         clear();
         printw("%s", frames[f]);
         refresh();
         napms(100);
         f++;
-        ch = getch();
-        if(ch == 'q') break;    
+//        ch = getch();
+//        if(ch == 'q') break;    
     }
     // Turns getch blocking on
     nodelay(stdscr, FALSE);
