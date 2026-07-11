@@ -38,17 +38,30 @@ int main(){
 
     // *---- curl setup ----*
 
-   // curl_global_init(CURL_GLOBAL_ALL); // starts curl, inits all platforms
-   // CURL *easy_handle = curl_easy_init();
-   // if(!easy_handle){
-   //     printf("CURL failed to initialize!");
-   //     return 1;
-   // }else{
-   //     struct Buffer buf = {malloc(1), 0};
-   //     curl_easy_setopt(easy_handle, CURLOPT_URL, server_URL);
-   //     curl_easy_setopt(easy_handle, CURLOPT_WRITEFUNCTION, (void*)&buf);
-   //     // start sending requests
-   // }
+   curl_global_init(CURL_GLOBAL_ALL); // starts curl, inits all platforms
+    CURL *easy_handle = curl_easy_init();
+    if(!easy_handle){
+        printf("CURL failed to initialize!");
+        return 1;
+    }
+    else{
+        struct Buffer buf = {malloc(1), 0};
+        curl_easy_setopt(easy_handle, CURLOPT_URL, server_URL);
+        curl_easy_setopt(easy_handle, CURLOPT_WRITEFUNCTION, curl_callback);
+        curl_easy_setopt(easy_handle, CURLOPT_WRITEDATA, (void*)&buf);
+       
+       
+        CURLcode res = curl_easy_perform(easy_handle);
+        if(res != CURLE_OK){
+            fprintf(stderr, "curl_easy_perform() failed: %s\n", curl_easy_strerror(res));
+        }
+        else{
+            printf("Got %zu bytes: %s\n", buf.size, buf.data);
+        }
+
+        free(buf.data);
+        curl_easy_cleanup(easy_handle);
+    }
 
     // *---- ncurses setup ----*
     noecho(); 
@@ -77,5 +90,6 @@ int main(){
     getch();
 
     endwin();
+    curl_global_cleanup();
     return 0;
 }
