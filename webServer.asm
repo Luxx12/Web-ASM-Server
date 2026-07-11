@@ -1,10 +1,11 @@
 section .data
-response: db "HTTP/1.0 200 OK", 13, 10, "Content-Length: 13", 13, 10, 13, 10, "Hello, world!"
-response_len: equ $ - response
 req_get: db "GET "
 get_len: equ $ - req_get
-err_response: db "HTTP/1.0 400 Bad Request", 13, 10, 13, 10
+err_response: db "HTTP/1.0 404 Not Found", 13, 10, 13, 10
 err_len: equ $ - err_response
+status_ok: db "HTTP/1.0 200 OK", 13, 10, 13, 10
+status_ok_len: equ $ - status_ok
+default_file: db "index.html", 0
 
 section .text
     global _start
@@ -21,9 +22,9 @@ _start:
 
     sub rsp, 16                  ; # reserve 16 bytes for sockaddr_in
     mov word [rsp], 2            ; # using IPv4 aswell
-    mov word [rsp + 2], 0xB822     ; # port #: 8888
-    mov dword [rsp + 4], 0        ; # listen on all
-    mov qword [rsp + 8], 0        ; # no padding
+    mov word [rsp + 2], 0xB822   ; # port #: 8888
+    mov dword [rsp + 4], 0       ; # listen on all
+    mov qword [rsp + 8], 0       ; # no padding
 
 
     mov rax, 49                  ; # bind(fd, &sock_adrr, 16)
@@ -75,26 +76,58 @@ child:
     syscall
 
     
-    lea rsi, [req_get]           ; # checks if GET was recieved, sends a 400 error if not (basically doing a string comparison here)
+    lea rsi, [req_get]           ; # checks if GET was recieved, sends a 400 error if not, basically doing a string comparison here
     lea rdi, [rsp]               ;
     mov rcx, get_len             ;
     cld                          ; # checks if their pointing at the same place in memory
     repe cmpsb                   ; # actually compares both strings in rsi & rdi byte by byte repeatedly using repe
     jne not_get
 
-    mov rax, 1                   ; # write(client fd, &response, response length)
-    mov rdi, r12                 ;
-    lea rsi, [response]          ;
-    mov rdx, response_len        ;
+    mov r13, rdi                 ; # saving start of file path
+
+path_scan:
+    cmp byte [rdi], 0x20         ; # checking for space char to see if we've hit boundary between the path and http::/1.1
+    je path_end                  ;
+    inc rdi                      ;
+    jmp path_scan                ;
+
+path_end:
+    mov byte [rdi], 0            ;
+    cmp byte [r13], '/'          ;
+    jne skip_root                ;
+    cmp byte [r13 + 1], 0        ;
+    jne skip_root                ;
+    lea r13, [default_file]      ;
+    jmp open_file                ;
+
+skip_root:
+    inc r13                      ;
+
+open_file:
+    mov rax, 2                   ;
+    mov rdi, r13                 ;
+    mov rsi, 0                   ;
     syscall
 
-    mov rax, 3                   ; # close client fd
-    mov rdi, r12                 ;
-    syscall                      ;
+    cmp rax, 0                   ;
+    js file_not_found            ;
 
-    mov rdi, rax                 ;
-    mov rax, 60                  ;
+    mov r14, rax                 ; # saving opened files fd
+
+    sub rsp, 8192                ;
+    mov rax, 0                   ;
+    mov rdi, r14                 ;
+    mov rsi, [rsp]               ;
+    mov rdx, 8192                ;
     syscall
+
+    mov r15, rax                 ;
+
+    mov rax, 3                   ;
+    mov rdi, r14                 ;
+    syscall
+
+
 
 not_get:
     mov rax, 1                   ;
