@@ -24,4 +24,4 @@ sudo apt upgrade
 
 ## Building
 
-`gcc client.c -lncurses -o client.o 
+`gcc client.c -lcurl -lncurses -o client.o`
