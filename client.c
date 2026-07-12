@@ -2,15 +2,6 @@
 // A custom TUI to recieve and display packets from our x86 Web Server
 #include "client.h"
 
-const char *title =
-" __   __   _____   ___        _______  _______  __   __    _     _  _______  _______    _______  _______  ______    __   __  _______  ______   \n"
-"|  |_|  | |  _  | |   |      |   _   ||       ||  |_|  |  | | _ | ||       ||  _    |  |       ||       ||    _ |  |  | |  ||       ||    _ |  \n"
-"|       | | |_| | |   |___   |  |_|  ||  _____||       |  | || || ||    ___|| |_|   |  |  _____||    ___||   | ||  |  |_|  ||    ___||   | ||  \n"
-"|       ||   _   ||    _  |  |       || |_____ |       |  |       ||   |___ |       |  | |_____ |   |___ |   |_||_ |       ||   |___ |   |_||_ \n"
-" |     | |  | |  ||   | | |  |       ||_____  ||       |  |       ||    ___||  _   |   |_____  ||    ___||    __  ||       ||    ___||    __  |\n"
-"|   _   ||  |_|  ||   |_| |  |   _   | _____| || ||_|| |  |   _   ||   |___ | |_|   |   _____| ||   |___ |   |  | | |     | |   |___ |   |  | |\n"
-"|__| |__||_______||_______|  |__| |__||_______||_|   |_|  |__| |__||_______||_______|  |_______||_______||___|  |_|  |___|  |_______||___|  |_|\n";
-
 // parameters as defined by curl
 size_t curl_callback(void *contents, size_t size, size_t nmeb, void *data){
     size_t total = size * nmeb;
@@ -25,8 +16,21 @@ size_t curl_callback(void *contents, size_t size, size_t nmeb, void *data){
 
     return total;
 }
+void start_menu(int center_row, int center_col){
+    const char *title =
+    "     ___ ___    _____ _____ _____    _ _ _     _      _____                     \n"
+    " _ _| . |  _|  |  _  |   __|     |  | | | |___| |_   |   __|___ ___ _ _ ___ ___ \n"
+    "|_'_| . | . |  |     |__   | | | |  | | | | -_| . |  |__   | -_|  _| | | -_|  _|\n"
+    "|_,_|___|___|  |__|__|_____|_|_|_|  |_____|___|___|  |_____|___|_|  \\_/|___|_|  \n";
+    printw("%s", title);
+    const char *start = "press any key to start.";
+    mvprintw(center_row, center_col-strlen(start), "%s", start);
+    getch();
+    clear();
+    return;
+}
 
-char *GET_FRAME(CURL *easy_handle, double theta, double phi, double distance){
+char *get_frame(CURL *easy_handle, double theta, double phi, double distance){
     char url[128];
     snprintf(url, sizeof(url), "http://localhost:8888/%f,%f,%f", theta, phi, distance);
 
@@ -42,21 +46,60 @@ char *GET_FRAME(CURL *easy_handle, double theta, double phi, double distance){
         free(buf.data);
         return NULL;
     }
-
     return buf.data;
 }
 
+char **get_frames(CURL *easy_handle){
+    char *frame, **frames;
+    double theta, phi, distance; // theta (0-360) phi (0-360)
+    int frame_size = 25600;
+    int num_frames = 360;
+    distance = 2;
+    frames = (char**)calloc(num_frames, sizeof(char)*frame_size + 1);
+    int i;
+    theta = 0;
+    phi = 0;
+    for(i = 0; i < num_frames; ++i){
+        frame = get_frame(easy_handle, theta, phi, distance);
+        if(frame == NULL) return NULL;
+        theta++;
+        phi++;
+        frames[i] = frame;
+    }
+    return frames;
+}
+
+void animation_loop(char **frames, int num_frames){
+    int f;
+    nodelay(stdscr, true);
+    while(getch() != 'q'){
+        if(f >= num_frames) f = 0;
+        clear();
+        printw("%s", frames[f]);
+        refresh();
+        napms(500);
+        f++;
+    }
+    nodelay(stdscr, false);
+    return;
+}
 int main(){
+    char **frames;
     const char *server_URL = "http://localhost:8888";
     int max_rows, max_cols;
     int f_width, f_height;
     int row_no, col_no;
     f_width = 160;
     f_height = 160;
-    int ch;
-    double theta = 0.0, phi = 0.5, distance = 10.0;
+    int ch, f = 0;
 
     // *---- curl setup ----*
+    curl_global_init(CURL_GLOBAL_ALL);
+    CURL *easy_handle = curl_easy_init();
+    if(!easy_handle){
+        printf("CURL failed to initialize!");
+        return 1;
+    }
     curl_global_init(CURL_GLOBAL_ALL);
     CURL *easy_handle = curl_easy_init();
     if(!easy_handle){
@@ -69,33 +112,14 @@ int main(){
     raw();
     cbreak();
     initscr();
-
     getmaxyx(stdscr, max_rows, max_cols);
 
-    row_no = max_rows/2 - f_height/2;
-    col_no = max_cols/2 - f_width/2;
-
-    // splash screen -- shown once before the animation loop starts
-    printw("%s", title);
-    refresh();
-    napms(1500);
-
-    nodelay(stdscr, TRUE); // makes getch non-blocking
-
-    // animation loop
-    while(getch() != 'q'){
-        char *frame = GET_FRAME(easy_handle, theta, phi, distance);
-        clear();
-        mvprintw(row_no, col_no, "%s", frame);
-        free(frame);
-        refresh();
-        napms(500);
-        theta += 0.1; // rotation step per frame
-    }
-
-    // Turns getch blocking on
-    nodelay(stdscr, FALSE);
-    getch();
+    start_menu(row_no, col_no); 
+    clear();
+    mvprintw(row_no, col_no-strlen("Loading..."), "Loading...");
+    frames = get_frames(easy_handle);
+    
+    animation_loop(frames, 360);
 
     endwin();
     curl_easy_cleanup(easy_handle);
