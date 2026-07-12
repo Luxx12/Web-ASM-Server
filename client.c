@@ -25,6 +25,7 @@ void start_menu(int center_row, int center_col){
     printw("%s", title);
     const char *start = "press any key to start.";
     mvprintw(center_row, center_col-strlen(start), "%s", start);
+    refresh();
     getch();
     clear();
     return;
@@ -55,7 +56,8 @@ char **get_frames(CURL *easy_handle){
     int frame_size = 25600;
     int num_frames = 360;
     distance = 2;
-    frames = (char**)calloc(num_frames, sizeof(char)*frame_size + 1);
+    frames = (char**)calloc(num_frames, sizeof(char*));
+    if(frames == NULL) return NULL;
     int i;
     theta = 0;
     phi = 0;
@@ -70,8 +72,9 @@ char **get_frames(CURL *easy_handle){
 }
 
 void animation_loop(char **frames, int num_frames){
-    int f;
+    int f = 0;
     nodelay(stdscr, true);
+    if(frames == NULL) return NULL;
     while(getch() != 'q'){
         if(f >= num_frames) f = 0;
         clear();
@@ -87,11 +90,8 @@ int main(){
     char **frames;
     const char *server_URL = "http://localhost:8888";
     int max_rows, max_cols;
-    int f_width, f_height;
     int row_no, col_no;
-    f_width = 160;
-    f_height = 160;
-    int ch, f = 0;
+    int ch;
 
     // *---- curl setup ----*
     curl_global_init(CURL_GLOBAL_ALL);
@@ -100,23 +100,19 @@ int main(){
         printf("CURL failed to initialize!");
         return 1;
     }
-    curl_global_init(CURL_GLOBAL_ALL);
-    CURL *easy_handle = curl_easy_init();
-    if(!easy_handle){
-        printf("CURL failed to initialize!");
-        return 1;
-    }
 
     // *---- ncurses setup ----*
-    noecho();
-    raw();
-    cbreak();
     initscr();
+    noecho();
+    cbreak();
     getmaxyx(stdscr, max_rows, max_cols);
+    row_no = max_rows/2;
+    col_no = max_cols/2;
 
     start_menu(row_no, col_no); 
     clear();
     mvprintw(row_no, col_no-strlen("Loading..."), "Loading...");
+    refresh();
     frames = get_frames(easy_handle);
     
     animation_loop(frames, 360);
@@ -124,5 +120,9 @@ int main(){
     endwin();
     curl_easy_cleanup(easy_handle);
     curl_global_cleanup();
+
+    for(int i = 0; i < 360; ++i){
+        free(frames[i]); 
+    }
     return 0;
 }
