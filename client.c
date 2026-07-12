@@ -1,4 +1,3 @@
-<<<<<<< HEAD
 // AdamHStiles
 // A custom TUI to recieve and display packets from our x86 Web Server
 #include "client.h"
@@ -27,153 +26,79 @@ size_t curl_callback(void *contents, size_t size, size_t nmeb, void *data){
     return total;
 }
 
-int main(){
-    const char **frames;
-    const char *server_URL = "http://localhost:8888";
-    int max_rows, max_cols;
-    int f_width, f_height;
-    int row_no, col_no;
-    f_width = 40; // 160x160 in the future
-    f_height = 40;
-    int ch, f = 0;
+char *GET_FRAME(CURL *easy_handle, double theta, double phi, double distance){
+    char url[128];
+    snprintf(url, sizeof(url), "http://localhost:8888/%f,%f,%f", theta, phi, distance);
 
-    // *---- curl setup ----*
+    struct Buffer buf = {malloc(1), 0};
 
-   // curl_global_init(CURL_GLOBAL_ALL); // starts curl, inits all platforms
-   // CURL *easy_handle = curl_easy_init();
-   // if(!easy_handle){
-   //     printf("CURL failed to initialize!");
-   //     return 1;
-   // }else{
-   //     struct Buffer buf = {malloc(1), 0};
-   //     curl_easy_setopt(easy_handle, CURLOPT_URL, server_URL);
-   //     curl_easy_setopt(easy_handle, CURLOPT_WRITEFUNCTION, (void*)&buf);
-   //     // start sending requests
-   // }
+    curl_easy_setopt(easy_handle, CURLOPT_URL, url);
+    curl_easy_setopt(easy_handle, CURLOPT_WRITEFUNCTION, curl_callback);
+    curl_easy_setopt(easy_handle, CURLOPT_WRITEDATA, (void*)&buf);
 
-    // *---- ncurses setup ----*
-    noecho(); 
-    raw();
-    cbreak();
-    initscr();
-
-    getmaxyx(stdscr, max_rows, max_cols);
-    
-    row_no = max_rows/2 - f_height;
-    col_no = max_cols/2 - f_width;
-    printw("%s", title);
-    mvprintw(max_rows, col_no, "testing");
-    nodelay(stdscr, TRUE); // makes getch non-blocking
-    // animation loop
-    while(getch() != 'q'){
-        if(f >= 3) f = 0;
-        clear();
-        printw("%s", frames[f]);
-        refresh();
-        napms(500);
-        f++;
+    CURLcode res = curl_easy_perform(easy_handle);
+    if(res != CURLE_OK){
+        fprintf(stderr, "GET_FRAME failed: %s\n", curl_easy_strerror(res));
+        free(buf.data);
+        return NULL;
     }
-    // Turns getch blocking on
-    nodelay(stdscr, FALSE);
-    getch();
 
-    endwin();
-    return 0;
-}
-=======
-// AdamHStiles
-// A custom TUI to recieve and display packets from our x86 Web Server
-#include "client.h"
-
-const char *title =
-" __   __   _____   ___        _______  _______  __   __    _     _  _______  _______    _______  _______  ______    __   __  _______  ______   \n"
-"|  |_|  | |  _  | |   |      |   _   ||       ||  |_|  |  | | _ | ||       ||  _    |  |       ||       ||    _ |  |  | |  ||       ||    _ |  \n"
-"|       | | |_| | |   |___   |  |_|  ||  _____||       |  | || || ||    ___|| |_|   |  |  _____||    ___||   | ||  |  |_|  ||    ___||   | ||  \n"
-"|       ||   _   ||    _  |  |       || |_____ |       |  |       ||   |___ |       |  | |_____ |   |___ |   |_||_ |       ||   |___ |   |_||_ \n"
-" |     | |  | |  ||   | | |  |       ||_____  ||       |  |       ||    ___||  _   |   |_____  ||    ___||    __  ||       ||    ___||    __  |\n"
-"|   _   ||  |_|  ||   |_| |  |   _   | _____| || ||_|| |  |   _   ||   |___ | |_|   |   _____| ||   |___ |   |  | | |     | |   |___ |   |  | |\n"
-"|__| |__||_______||_______|  |__| |__||_______||_|   |_|  |__| |__||_______||_______|  |_______||_______||___|  |_|  |___|  |_______||___|  |_|\n";
-
-// parameters as defined by curl
-size_t curl_callback(void *contents, size_t size, size_t nmeb, void *data){
-    size_t total = size * nmeb;
-    struct Buffer *buf = (struct Buffer*)data;
-    char *ptr = realloc(buf->data, buf->size + total + 1);
-    if(!ptr) return 0; // out of memory
-    buf->data = ptr;
-    memcpy(&(buf->data[buf->size]), contents, total);
-    // copies contents into our buffer
-    buf->size += total;
-    buf->data[buf->size] = '\0';
-
-    return total;
+    return buf.data;
 }
 
 int main(){
-    const char **frames;
     const char *server_URL = "http://localhost:8888";
     int max_rows, max_cols;
     int f_width, f_height;
     int row_no, col_no;
-    f_width = 40; // 160x160 in the future
-    f_height = 40;
-    int ch, f = 0;
+    f_width = 160;
+    f_height = 160;
+    int ch;
+    double theta = 0.0, phi = 0.5, distance = 10.0;
 
     // *---- curl setup ----*
-
-   curl_global_init(CURL_GLOBAL_ALL); // starts curl, inits all platforms
+    curl_global_init(CURL_GLOBAL_ALL);
     CURL *easy_handle = curl_easy_init();
     if(!easy_handle){
         printf("CURL failed to initialize!");
         return 1;
     }
-    else{
-        struct Buffer buf = {malloc(1), 0};
-        curl_easy_setopt(easy_handle, CURLOPT_URL, server_URL);
-        curl_easy_setopt(easy_handle, CURLOPT_WRITEFUNCTION, curl_callback);
-        curl_easy_setopt(easy_handle, CURLOPT_WRITEDATA, (void*)&buf);
-       
-       
-        CURLcode res = curl_easy_perform(easy_handle);
-        if(res != CURLE_OK){
-            fprintf(stderr, "curl_easy_perform() failed: %s\n", curl_easy_strerror(res));
-        }
-        else{
-            printf("Got %zu bytes: %s\n", buf.size, buf.data);
-        }
-
-        free(buf.data);
-        curl_easy_cleanup(easy_handle);
-    }
 
     // *---- ncurses setup ----*
-    noecho(); 
+    noecho();
     raw();
     cbreak();
     initscr();
 
     getmaxyx(stdscr, max_rows, max_cols);
-    
-    row_no = max_rows/2 - f_height;
-    col_no = max_cols/2 - f_width;
+
+    row_no = max_rows/2 - f_height/2;
+    col_no = max_cols/2 - f_width/2;
+
+    // splash screen -- shown once before the animation loop starts
     printw("%s", title);
-    mvprintw(max_rows, col_no, "testing");
+    refresh();
+    napms(1500);
+
     nodelay(stdscr, TRUE); // makes getch non-blocking
+
     // animation loop
     while(getch() != 'q'){
-        if(f >= 3) f = 0;
+        char *frame = GET_FRAME(easy_handle, theta, phi, distance);
         clear();
-        printw("%s", frames[f]);
+        mvprintw(row_no, col_no, "%s", frame);
+        free(frame);
         refresh();
         napms(500);
-        f++;
+        theta += 0.1; // rotation step per frame
     }
+
     // Turns getch blocking on
     nodelay(stdscr, FALSE);
     getch();
 
     endwin();
+    curl_easy_cleanup(easy_handle);
     curl_global_cleanup();
     return 0;
 }
->>>>>>> 6926f50012809fba8cefcfb066c6654382001905
