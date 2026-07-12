@@ -23,5 +23,7 @@ sudo apt upgrade
 `sudo apt install libcurl4-openssl-dev`
 
 ## Building
-
+Run the server in one terminal
+`./server`
+Run the client in another terminal
 `gcc client.c -lcurl -lncurses -o client.o`
