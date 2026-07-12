@@ -13,7 +13,6 @@ size_t curl_callback(void *contents, size_t size, size_t nmeb, void *data){
     // copies contents into our buffer
     buf->size += total;
     buf->data[buf->size] = '\0';
-
     return total;
 }
 void start_menu(int center_row, int center_col){
@@ -31,9 +30,25 @@ void start_menu(int center_row, int center_col){
     return;
 }
 
-char *get_frame(CURL *easy_handle, double theta, double phi, double distance){
+char *read_output_file(const char *path){
+    FILE *fp = fopen(path, "rb");
+    if(!fp) return NULL;
+
+    fseek(fp, 0, SEEK_END);
+    long size = ftell(fp);
+    rewind(fp);
+
+    char *buf = malloc(size + 1);
+    fread(buf, 1, size, fp);
+    buf[size] = '\0';
+
+    fclose(fp);
+    return buf;
+}
+
+char *GET_FRAME(CURL *easy_handle, double theta, double phi, double distance){
     char url[128];
-    snprintf(url, sizeof(url), "http://localhost:8888/%f,%f,%f", theta, phi, distance);
+    snprintf(url, sizeof(url), "http://localhost:8888/?t=%f&p=%f&d=%f", theta, phi, distance);
 
     struct Buffer buf = {malloc(1), 0};
 
@@ -47,6 +62,7 @@ char *get_frame(CURL *easy_handle, double theta, double phi, double distance){
         free(buf.data);
         return NULL;
     }
+
     return buf.data;
 }
 
@@ -87,7 +103,6 @@ void animation_loop(char **frames, int num_frames){
     return;
 }
 int main(){
-    char **frames;
     const char *server_URL = "http://localhost:8888";
     int max_rows, max_cols;
     int row_no, col_no;
