@@ -46,7 +46,7 @@ char *read_output_file(const char *path){
     return buf;
 }
 
-char *GET_FRAME(CURL *easy_handle, double theta, double phi, double distance){
+char *get_frame(CURL *easy_handle, double theta, double phi, double distance){
     char url[128];
     snprintf(url, sizeof(url), "http://localhost:8888/?t=%f&p=%f&d=%f", theta, phi, distance);
 
@@ -70,7 +70,7 @@ char **get_frames(CURL *easy_handle){
     char *frame, **frames;
     double theta, phi, distance; // theta (0-360) phi (0-360)
     int frame_size = 25600;
-    int num_frames = 360;
+    int num_frames = 720;
     distance = 2;
     frames = (char**)calloc(num_frames, sizeof(char*));
     if(frames == NULL) return NULL;
@@ -80,8 +80,7 @@ char **get_frames(CURL *easy_handle){
     for(i = 0; i < num_frames; ++i){
         frame = get_frame(easy_handle, theta, phi, distance);
         if(frame == NULL) return NULL;
-        theta++;
-        phi++;
+        theta -= 0.5;
         frames[i] = frame;
     }
     return frames;
@@ -90,13 +89,13 @@ char **get_frames(CURL *easy_handle){
 void animation_loop(char **frames, int num_frames){
     int f = 0;
     nodelay(stdscr, true);
-    if(frames == NULL) return NULL;
+    if(frames == NULL) return;
     while(getch() != 'q'){
         if(f >= num_frames) f = 0;
         clear();
         printw("%s", frames[f]);
         refresh();
-        napms(500);
+        napms(15);
         f++;
     }
     nodelay(stdscr, false);
@@ -104,6 +103,7 @@ void animation_loop(char **frames, int num_frames){
 }
 int main(){
     const char *server_URL = "http://localhost:8888";
+    char **frames;
     int max_rows, max_cols;
     int row_no, col_no;
     int ch;
@@ -130,7 +130,7 @@ int main(){
     refresh();
     frames = get_frames(easy_handle);
     
-    animation_loop(frames, 360);
+    animation_loop(frames, 720);
 
     endwin();
     curl_easy_cleanup(easy_handle);
