@@ -83,6 +83,7 @@ Eigen::Matrix<int, 2, 8> viewportTransform(double d, const Eigen::Matrix<double,
     }
 
     Eigen::Matrix<int, 2, 8> V_int = V.array().round().cast<int>().matrix();
+    V_int = V_int.cwiseMax(0).cwiseMin(SIZE - 1);
 
     return V_int;
 }
