@@ -4,6 +4,11 @@ get_len: equ $ - req_get
 err_response: db "HTTP/1.0 404 Not Found", 13, 10, 13, 10
 err_len: equ $ - err_response
 
+default_file: db "./output.txt", 0
+
+response_ok: db "HTTP/1.0 200 OK", 13, 10, 13, 10
+response_ok_len: equ $ - response_ok
+
 section .text
     extern getFrame
     extern strtod
@@ -82,6 +87,8 @@ child:
     repe cmpsb                   ; # actually compares both strings in rsi & rdi byte by byte repeatedly using repe
     jne not_get
 
+    mov rbx, rdi                 ; save start of request path (right after "GET "), before strtod calls clobber rdi
+
     lea r14, [rsp + 8]           ; pointer to start of theta's digits, captured before rsp moves
 
     sub rsp, 32                  ; end ptr, 3 doubles
@@ -113,29 +120,13 @@ child:
     call getFrame               ; ignoring return value her
 
 
-    mov rax, 2                  ; # open
-    lea rdi, [filename]
-    mov rsi, 0                  ; # O_RDONLY
-    mov rdx, 0                  
-    syscall
-
-    mov r13, rax
-
-    sub rsp, 60000              ; sub by some large amount
-    and rsp, 0xFFFFFFFFFFFFFFF0 ; ensure alignment
-
-    mov rax, 0           
-    mov rdi, r13          
-    lea rsi, [rsp]         
-    mov rdx, 60000         
-    syscall
-
-    mov r13, rax
-
-    mov r13, rdi                 ; # saving start of file path
+    mov r13, rbx                 ; saving start of file path
+    mov rdi, rbx                 ; scan cursor starts at the path too
 
 path_scan:
-    cmp byte [rdi], 0x20         ; # checking for space char to see if we've hit boundary between the path and http::/1.1
+    cmp byte [rdi], 0x20         ; # space = end of path, no query string
+    je path_end                  ;
+    cmp byte [rdi], 0x3F         ; # '?' = end of path, query string follows
     je path_end                  ;
     inc rdi                      ;
     jmp path_scan                ;
@@ -163,17 +154,25 @@ open_file:
 
     mov r14, rax                 ; # saving opened files fd
 
-    sub rsp, 8192                ;
+    sub rsp, 65536                ;
     mov rax, 0                   ;
     mov rdi, r14                 ;
-    mov rsi, [rsp]               ;
-    mov rdx, 8192                ;
+    lea rsi, [rsp]               ;
+    mov rdx, 65536                ;
+    syscall
+
+    mov r15, rax                  ; save actual bytes read
+
+    mov rax, 1                   ; # write(client fd, &response_ok, status line length)
+    mov rdi, r12                 ;
+    lea rsi, [response_ok]       ;
+    mov rdx, response_ok_len     ;
     syscall
 
     mov rax, 1                   ; # write(client fd, &response, response length)
     mov rdi, r12                 ;
     lea rsi, [rsp]               ;
-    mov rdx, r13                 ;
+    mov rdx, r15                 ; actual bytes read from the file
     syscall                      ; send entire file
 
     mov r15, rax                 ;
@@ -184,6 +183,7 @@ open_file:
 
 
 
+file_not_found:
 not_get:
     mov rax, 1                   ;
     mov rdi, r12                 ;

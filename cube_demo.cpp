@@ -115,7 +115,7 @@ void LineAlgorithm(Eigen::Matrix<int, SIZE, SIZE>& tsM, int x1, int y1, int x2, 
     int i = 1;
 
     while (i <= dX) {
-        if (tsM(y, x) != VERTEX) tsM(y, x) = EDGE;
+        tsM(y, x) = EDGE;
 
         while(e >= 0) {
             if(ichange) {
@@ -212,7 +212,7 @@ extern "C" int getFrame(double theta, double phi, double d) { // to be called fr
         transformed.col(i) *= (d / transformed.col(i).z());
     }
 
-    transformed = rotate2D(toRad(phi)) * transformed;
+    transformed = rotate2D(phi) * transformed;
 
     Eigen::Matrix<double, 2, 8> projVertices = transformed.block(0, 0, 2, 8);
     Eigen::Matrix<int, 2, 8> viewTransformed = viewportTransform(d, projVertices);
@@ -237,7 +237,7 @@ extern "C" int getFrame(double theta, double phi, double d) { // to be called fr
     return 1;
 }
 
-/*
+
 int main() {
 
     double theta = 0.0;
@@ -274,7 +274,7 @@ int main() {
             transformed.col(i) *= (d / transformed.col(i).z());
         }
 
-        transformed = rotate2D(toRad(phi)) * transformed;
+        transformed = rotate2D(phi) * transformed;
 
         Eigen::Matrix<double, 2, 8> projVertices = transformed.block(0, 0, 2, 8);
         Eigen::Matrix<int, 2, 8> viewTransformed = viewportTransform(d, projVertices);
@@ -285,4 +285,4 @@ int main() {
         theta += 0.09;
     }
 }
-*/
+
