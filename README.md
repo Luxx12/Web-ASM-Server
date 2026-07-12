@@ -25,5 +25,6 @@ sudo apt upgrade
 ## Building
 Run the server in one terminal
 `./server`
+
 Run the client in another terminal
 `gcc client.c -lcurl -lncurses -o client.o`
