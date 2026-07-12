@@ -3,14 +3,18 @@ req_get: db "GET "
 get_len: equ $ - req_get
 err_response: db "HTTP/1.0 404 Not Found", 13, 10, 13, 10
 err_len: equ $ - err_response
-status_ok: db "HTTP/1.0 200 OK", 13, 10, 13, 10
-status_ok_len: equ $ - status_ok
-default_file: db "index.html", 0
+
+default_file: db "./output.txt", 0
+
+response_ok: db "HTTP/1.0 200 OK", 13, 10, 13, 10
+response_ok_len: equ $ - response_ok
 
 section .text
-    global _start
+    extern getFrame
+    extern strtod
+    global main
 
-_start:
+main:
     mov rax, 41                  ; # socket
     mov rdi, 2                   ; # AF_INET = IPv4
     mov rsi, 1                   ; # SOCK_STREAM = TCP
@@ -83,10 +87,46 @@ child:
     repe cmpsb                   ; # actually compares both strings in rsi & rdi byte by byte repeatedly using repe
     jne not_get
 
-    mov r13, rdi                 ; # saving start of file path
+    mov rbx, rdi                 ; save start of request path (right after "GET "), before strtod calls clobber rdi
+
+    lea r14, [rsp + 8]           ; pointer to start of theta's digits, captured before rsp moves
+
+    sub rsp, 32                  ; end ptr, 3 doubles
+    and rsp, 0xFFFFFFFFFFFFFFF0  ; force 16-byte alignment before calling into strtod/getFrame
+
+    mov rdi, r14
+    lea rsi, [rsp]               ; end ptr
+
+    call strtod 
+
+    movsd [rsp + 8], xmm0       ; theta
+
+    mov rdi, [rsp]
+    add rdi, 3
+    lea rsi, [rsp]
+    
+    call strtod
+    movsd [rsp + 16], xmm0      ; phi
+
+    mov rdi, [rsp]
+    add rdi, 3
+    lea rsi, [rsp]
+    call strtod
+    movsd [rsp + 24], xmm0      ; distance
+
+    movsd xmm0, [rsp + 8]
+    movsd xmm1, [rsp + 16]
+    movsd xmm2, [rsp + 24]      
+    call getFrame               ; ignoring return value her
+
+
+    mov r13, rbx                 ; saving start of file path
+    mov rdi, rbx                 ; scan cursor starts at the path too
 
 path_scan:
-    cmp byte [rdi], 0x20         ; # checking for space char to see if we've hit boundary between the path and http::/1.1
+    cmp byte [rdi], 0x20         ; # space = end of path, no query string
+    je path_end                  ;
+    cmp byte [rdi], 0x3F         ; # '?' = end of path, query string follows
     je path_end                  ;
     inc rdi                      ;
     jmp path_scan                ;
@@ -114,12 +154,26 @@ open_file:
 
     mov r14, rax                 ; # saving opened files fd
 
-    sub rsp, 8192                ;
+    sub rsp, 65536                ;
     mov rax, 0                   ;
     mov rdi, r14                 ;
-    mov rsi, [rsp]               ;
-    mov rdx, 8192                ;
+    lea rsi, [rsp]               ;
+    mov rdx, 65536                ;
     syscall
+
+    mov r15, rax                  ; save actual bytes read
+
+    mov rax, 1                   ; # write(client fd, &response_ok, status line length)
+    mov rdi, r12                 ;
+    lea rsi, [response_ok]       ;
+    mov rdx, response_ok_len     ;
+    syscall
+
+    mov rax, 1                   ; # write(client fd, &response, response length)
+    mov rdi, r12                 ;
+    lea rsi, [rsp]               ;
+    mov rdx, r15                 ; actual bytes read from the file
+    syscall                      ; send entire file
 
     mov r15, rax                 ;
 
@@ -129,6 +183,7 @@ open_file:
 
 
 
+file_not_found:
 not_get:
     mov rax, 1                   ;
     mov rdi, r12                 ;

@@ -100,9 +100,15 @@ int main(){
         printf("CURL failed to initialize!");
         return 1;
     }
+    curl_global_init(CURL_GLOBAL_ALL);
+    CURL *easy_handle = curl_easy_init();
+    if(!easy_handle){
+        printf("CURL failed to initialize!");
+        return 1;
+    }
 
     // *---- ncurses setup ----*
-    noecho(); 
+    noecho();
     raw();
     cbreak();
     initscr();
@@ -116,5 +122,7 @@ int main(){
     animation_loop(frames, 360);
 
     endwin();
+    curl_easy_cleanup(easy_handle);
+    curl_global_cleanup();
     return 0;
 }

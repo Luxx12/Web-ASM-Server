@@ -1,8 +1,13 @@
+#include <stdlib.h>
+
 #include <iostream>
 #include <string>
 #include <cmath>
 #include <vector>
 #include <fstream>
+
+#include <cstdio>
+#include <cstdlib>
 
 #include <Eigen/Dense>
 
@@ -38,7 +43,7 @@ Eigen::Matrix<double, 4, 4> rodriguesRotMat(double theta) {
           B, A, C, 0,
           C, B, A, 0,
           0, 0, 0, 3;
-          
+
     R *= 1.0/3.0;
 
     return R;
@@ -83,7 +88,7 @@ Eigen::Matrix<int, 2, 8> viewportTransform(double d, const Eigen::Matrix<double,
 }
 
 void LineAlgorithm(Eigen::Matrix<int, SIZE, SIZE>& tsM, int x1, int y1, int x2, int y2) {
-    
+
     if (x1 == x2 && y1 == y2) {
         tsM(y1, x1) = EDGE;
         return;
@@ -110,7 +115,7 @@ void LineAlgorithm(Eigen::Matrix<int, SIZE, SIZE>& tsM, int x1, int y1, int x2, 
     int i = 1;
 
     while (i <= dX) {
-        tsM(y, x) = EDGE;
+        if (tsM(y, x) != VERTEX) tsM(y, x) = EDGE;
 
         while(e >= 0) {
             if(ichange) {
@@ -151,7 +156,7 @@ Eigen::Matrix<int, SIZE, SIZE> triStateMatrix(Eigen::Matrix<int, 2, 8>& verticeC
     // call Bresenham line algorithm to fill edges
 
     for (int i = 0; i < 12; i++) {
-        LineAlgorithm(tsMatrix, verticeCoords.col(V1[i]).x(), verticeCoords.col(V1[i]).y(), verticeCoords.col(V2[i]).x(), verticeCoords.col(V2[i]).y()); 
+        LineAlgorithm(tsMatrix, verticeCoords.col(V1[i]).x(), verticeCoords.col(V1[i]).y(), verticeCoords.col(V2[i]).x(), verticeCoords.col(V2[i]).y());
     }
 
     return tsMatrix;
@@ -202,12 +207,12 @@ extern "C" int getFrame(double theta, double phi, double d) { // to be called fr
     }
 
     transformed = perspectiveProject(d) * transformed;
-    
+
     for (int i = 0; i < transformed.cols(); i++) {
         transformed.col(i) *= (d / transformed.col(i).z());
     }
 
-    transformed = rotate2D(phi) * transformed;
+    transformed = rotate2D(toRad(phi)) * transformed;
 
     Eigen::Matrix<double, 2, 8> projVertices = transformed.block(0, 0, 2, 8);
     Eigen::Matrix<int, 2, 8> viewTransformed = viewportTransform(d, projVertices);
@@ -253,8 +258,8 @@ int main() {
     cubeVertices.col(6) << -1, 1, 1, 1;
     cubeVertices.col(7) << 1, 1, 1, 1;
 
-    std::cout << "\x1b[2J\x1b[H"; 
-    
+    std::cout << "\x1b[2J\x1b[H";
+
     while(1) {
         Eigen::Matrix<double, 4, 8> transformed = cubeVertices;
         transformed = rodriguesRotMat(toRad(theta)) * cubeVertices;
@@ -264,12 +269,12 @@ int main() {
         }
 
         transformed = perspectiveProject(d) * transformed;
-        
+
         for (int i = 0; i < transformed.cols(); i++) {
             transformed.col(i) *= (d / transformed.col(i).z());
         }
 
-        transformed = rotate2D(phi) * transformed;
+        transformed = rotate2D(toRad(phi)) * transformed;
 
         Eigen::Matrix<double, 2, 8> projVertices = transformed.block(0, 0, 2, 8);
         Eigen::Matrix<int, 2, 8> viewTransformed = viewportTransform(d, projVertices);
