@@ -1,14 +1,11 @@
 #include <stdlib.h>
-
 #include <iostream>
 #include <string>
 #include <cmath>
 #include <vector>
 #include <fstream>
-
 #include <cstdio>
 #include <cstdlib>
-
 #include <Eigen/Dense>
 
 #define SIZE 160
@@ -47,7 +44,6 @@ Eigen::Matrix<double, 4, 4> rodriguesRotMat(double theta) {
     R *= 1.0/3.0;
 
     return R;
-
 }
 
 Eigen::Matrix<double, 4, 4> perspectiveProject(double d) {
@@ -89,7 +85,6 @@ Eigen::Matrix<int, 2, 8> viewportTransform(double d, const Eigen::Matrix<double,
 }
 
 void LineAlgorithm(Eigen::Matrix<int, SIZE, SIZE>& tsM, int x1, int y1, int x2, int y2) {
-
     if (x1 == x2 && y1 == y2) {
         tsM(y1, x1) = EDGE;
         return;
@@ -117,7 +112,6 @@ void LineAlgorithm(Eigen::Matrix<int, SIZE, SIZE>& tsM, int x1, int y1, int x2, 
 
     while (i <= dX) {
         if (tsM(y, x) != VERTEX) tsM(y, x) = EDGE;
-
         while(e >= 0) {
             if(ichange) {
                 x = x + s1;
@@ -126,13 +120,11 @@ void LineAlgorithm(Eigen::Matrix<int, SIZE, SIZE>& tsM, int x1, int y1, int x2, 
             }
             e = e - (2 * dX);
         }
-
         if (ichange) {
             y = y + s2;
         } else {
             x = x + s1;
         }
-
         e = e + (2 * dY);
 
         i++;
@@ -155,16 +147,13 @@ Eigen::Matrix<int, SIZE, SIZE> triStateMatrix(Eigen::Matrix<int, 2, 8>& verticeC
     }
 
     // call Bresenham line algorithm to fill edges
-
     for (int i = 0; i < 12; i++) {
         LineAlgorithm(tsMatrix, verticeCoords.col(V1[i]).x(), verticeCoords.col(V1[i]).y(), verticeCoords.col(V2[i]).x(), verticeCoords.col(V2[i]).y());
     }
-
     return tsMatrix;
 }
 
 std::string stringFrame(const Eigen::Matrix<int, SIZE, SIZE>& triStateMatrix) {
-
     std::string frame;
 
     for (int row = 0; row < SIZE; ++row) {
@@ -180,12 +169,10 @@ std::string stringFrame(const Eigen::Matrix<int, SIZE, SIZE>& triStateMatrix) {
         }
         frame += '\n';
     }
-
     return frame;
 }
 
 extern "C" int getFrame(double theta, double phi, double d) { // to be called from the asm file
-
     std::vector<int> V1 = {0, 0, 0, 1, 1, 2, 2, 3, 4, 4, 5, 6};
     std::vector<int> V2 = {1, 2, 4, 3, 5, 3, 6, 7, 5, 6, 7, 7};
 
@@ -224,7 +211,6 @@ extern "C" int getFrame(double theta, double phi, double d) { // to be called fr
     std::ofstream outputFile("output.txt");
 
     if (outputFile.is_open()) {
-
         outputFile << cubeString;
         outputFile.close();
 
@@ -234,6 +220,5 @@ extern "C" int getFrame(double theta, double phi, double d) { // to be called fr
         std::cerr << "Error: Could not open or create the file." << std::endl;
         return 1;
     }
-
     return 1;
 }
