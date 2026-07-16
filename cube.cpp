@@ -9,11 +9,9 @@
 #include <Eigen/Dense>
 
 #define SIZE 160
-
 #define EMPTY 0
 #define EDGE 1
 #define VERTEX 2
-
 #define PI 3.14159265358979323846
 
 const double MAGIC_MAX = (1.4 / 2.0);
@@ -35,7 +33,6 @@ Eigen::Matrix<double, 4, 4> rodriguesRotMat(double theta) {
     double C = 1 - (std::cos(theta)) - (sqrt(3) * std::sin(theta));
 
     // Implementation for Rodrigues' rotation formula
-
     R <<  A, C, B, 0,
           B, A, C, 0,
           C, B, A, 0,
@@ -48,7 +45,6 @@ Eigen::Matrix<double, 4, 4> rodriguesRotMat(double theta) {
 
 Eigen::Matrix<double, 4, 4> perspectiveProject(double d) {
     Eigen::Matrix<double, 4, 4> P;
-
     P << 1, 0, 0, 0,
          0, 1, 0, 0,
          0, 0, 1, 0,
@@ -70,7 +66,6 @@ Eigen::Matrix<double, 4, 4> rotate2D(double phi) {
 
 Eigen::Matrix<int, 2, 8> viewportTransform(double d, const Eigen::Matrix<double, 2, 8>& original) {
     Eigen::Matrix<double, 2, 8> V = original;
-
     V /= (MAGIC_MAX * d);
 
     for (int i = 0; i < V.cols(); i++) {
@@ -126,7 +121,7 @@ void LineAlgorithm(Eigen::Matrix<int, SIZE, SIZE>& tsM, int x1, int y1, int x2, 
             x = x + s1;
         }
         e = e + (2 * dY);
-
+    
         i++;
     }
 
@@ -145,7 +140,6 @@ Eigen::Matrix<int, SIZE, SIZE> triStateMatrix(Eigen::Matrix<int, 2, 8>& verticeC
 
         tsMatrix(tsY, tsX) = VERTEX;
     }
-
     // call Bresenham line algorithm to fill edges
     for (int i = 0; i < 12; i++) {
         LineAlgorithm(tsMatrix, verticeCoords.col(V1[i]).x(), verticeCoords.col(V1[i]).y(), verticeCoords.col(V2[i]).x(), verticeCoords.col(V2[i]).y());
@@ -155,7 +149,6 @@ Eigen::Matrix<int, SIZE, SIZE> triStateMatrix(Eigen::Matrix<int, 2, 8>& verticeC
 
 std::string stringFrame(const Eigen::Matrix<int, SIZE, SIZE>& triStateMatrix) {
     std::string frame;
-
     for (int row = 0; row < SIZE; ++row) {
         for (int col = 0; col < SIZE; ++col) {
             char ch;
@@ -193,20 +186,18 @@ extern "C" int getFrame(double theta, double phi, double d) { // to be called fr
     for (int i = 0; i < transformed.cols(); i++) {
         transformed.col(i).z() = transformed.col(i).z() + 3;
     }
-
     transformed = perspectiveProject(d) * transformed;
 
     for (int i = 0; i < transformed.cols(); i++) {
         transformed.col(i) *= (d / transformed.col(i).z());
     }
-
     transformed = rotate2D(toRad(phi)) * transformed;
 
     Eigen::Matrix<double, 2, 8> projVertices = transformed.block(0, 0, 2, 8);
     Eigen::Matrix<int, 2, 8> viewTransformed = viewportTransform(d, projVertices);
 
     Eigen::Matrix<int, SIZE, SIZE> tsMatrix = triStateMatrix(viewTransformed, V1, V2);
-
+    // TODO remvoe output file, high performance impact
     std::string cubeString = stringFrame(tsMatrix);
     std::ofstream outputFile("output.txt");
 
