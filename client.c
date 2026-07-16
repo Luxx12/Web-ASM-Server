@@ -15,36 +15,6 @@ size_t curl_callback(void *contents, size_t size, size_t nmeb, void *data){
     buf->data[buf->size] = '\0';
     return total;
 }
-void start_menu(int center_row, int center_col){
-    const char *title =
-    "     ___ ___    _____ _____ _____    _ _ _     _      _____                     \n"
-    " _ _| . |  _|  |  _  |   __|     |  | | | |___| |_   |   __|___ ___ _ _ ___ ___ \n"
-    "|_'_| . | . |  |     |__   | | | |  | | | | -_| . |  |__   | -_|  _| | | -_|  _|\n"
-    "|_,_|___|___|  |__|__|_____|_|_|_|  |_____|___|___|  |_____|___|_|  \\_/|___|_|  \n";
-    printw("%s", title);
-    const char *start = "press any key to start.";
-    mvprintw(center_row, center_col-strlen(start), "%s", start);
-    refresh();
-    getch();
-    clear();
-    return;
-}
-
-char *read_output_file(const char *path){
-    FILE *fp = fopen(path, "rb");
-    if(!fp) return NULL;
-
-    fseek(fp, 0, SEEK_END);
-    long size = ftell(fp);
-    rewind(fp);
-
-    char *buf = malloc(size + 1);
-    fread(buf, 1, size, fp);
-    buf[size] = '\0';
-
-    fclose(fp);
-    return buf;
-}
 
 char *get_frame(CURL *easy_handle, double theta, double phi, double distance){
     char url[128];
@@ -69,8 +39,8 @@ char *get_frame(CURL *easy_handle, double theta, double phi, double distance){
 char **get_frames(CURL *easy_handle){
     char *frame, **frames;
     double theta, phi, distance; // theta (0-360) phi (0-360)
-    int frame_size = 25600;
-    int num_frames = 720;
+    int frame_size = 25600; // 160x160 chars
+    int num_frames = 200; // since the cube is symmetrical on all sides you only need to simulate 120 degrees
     distance = 2;
     frames = (char**)calloc(num_frames, sizeof(char*));
     if(frames == NULL) return NULL;
@@ -80,10 +50,25 @@ char **get_frames(CURL *easy_handle){
     for(i = 0; i < num_frames; ++i){
         frame = get_frame(easy_handle, theta, phi, distance);
         if(frame == NULL) return NULL;
-        theta -= 0.5;
+        theta -= 0.6;
         frames[i] = frame;
     }
     return frames;
+}
+
+void start_menu(int center_row, int center_col){
+    const char *title =
+    "     ___ ___    _____ _____ _____    _ _ _     _      _____                     \n"
+    " _ _| . |  _|  |  _  |   __|     |  | | | |___| |_   |   __|___ ___ _ _ ___ ___ \n"
+    "|_'_| . | . |  |     |__   | | | |  | | | | -_| . |  |__   | -_|  _| | | -_|  _|\n"
+    "|_,_|___|___|  |__|__|_____|_|_|_|  |_____|___|___|  |_____|___|_|  \\_/|___|_|  \n";
+    printw("%s", title);
+    const char *start = "press any key to start.";
+    mvprintw(center_row, center_col-strlen(start), "%s", start);
+    refresh();
+    getch();
+    clear();
+    return;
 }
 
 void animation_loop(char **frames, int num_frames){
@@ -101,9 +86,11 @@ void animation_loop(char **frames, int num_frames){
     nodelay(stdscr, false);
     return;
 }
+
 int main(){
     const char *server_URL = "http://localhost:8888";
     char **frames;
+    int num_frames = 200;
     int max_rows, max_cols;
     int row_no, col_no;
     int ch;
@@ -130,7 +117,7 @@ int main(){
     refresh();
     frames = get_frames(easy_handle);
     
-    animation_loop(frames, 720);
+    animation_loop(frames, num_frames);
 
     endwin();
     curl_easy_cleanup(easy_handle);

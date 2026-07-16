@@ -8,11 +8,12 @@ struct Buffer{
     size_t size;
 };
 
-struct menu_button{
-    int row;
-    int col;
-    char *txt;
-};
-
 size_t curl_callback(void *contents, size_t size, size_t nmeb, void *data);
-char *GET_FRAME(CURL *easy_handle, double theta, double phi, double distance);
+
+char *get_frame(CURL *easy_handle, double theta, double phi, double distance);
+
+char **get_frames(CURL *easy_handle);
+
+void start_menu(int center_row, int center_col);
+
+void animation_loop(char **frames, int num_frames);
