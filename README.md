@@ -28,3 +28,4 @@ Run the server in one terminal
 
 Run the client in another terminal
 `gcc client.c -lcurl -lncurses -o client.o`
+`./client.o`
